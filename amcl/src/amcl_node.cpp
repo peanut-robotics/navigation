@@ -289,6 +289,12 @@ class AmclNode
 
     void reconfigureCB(amcl::AMCLConfig &config, uint32_t level);
 
+    bool got_initial_pose_;
+    int update_count_;
+    ros::Time last_update_ts_;
+    double laser_scan_dt_avg_;
+    double update_dt_avg_;
+
     ros::Time last_laser_received_ts_;
     ros::Duration laser_check_interval_;
     void checkLaserReceived(const ros::TimerEvent& event);
@@ -511,6 +517,11 @@ AmclNode::AmclNode() :
   dsrv_ = new dynamic_reconfigure::Server<amcl::AMCLConfig>(ros::NodeHandle("~"));
   dynamic_reconfigure::Server<amcl::AMCLConfig>::CallbackType cb = boost::bind(&AmclNode::reconfigureCB, this, _1, _2);
   dsrv_->setCallback(cb);
+
+  got_initial_pose_ = false;
+  update_count_ = 0;
+  laser_scan_dt_avg_ = 1.0;
+  update_dt_avg_ = 1.0;
 
   // 15s timer to warn on lack of receipt of laser scans, #5209
   laser_check_interval_ = ros::Duration(15.0);
@@ -1138,8 +1149,19 @@ void
 AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
 {
   std::string laser_scan_frame_id = stripSlash(laser_scan->header.frame_id);
-  last_laser_received_ts_ = ros::Time::now();
+  const auto now = ros::Time::now();
+  if (last_laser_received_ts_ != ros::Time(0.0)) {
+    const auto dt = (now - last_laser_received_ts_).toSec();
+    // moving average approximation
+    if (dt > 0.0 && dt < 5.0) {
+      laser_scan_dt_avg_ = 0.90 * laser_scan_dt_avg_ + 0.10 * dt;
+    }
+  }
+  last_laser_received_ts_ = now;
   if( map_ == NULL ) {
+    return;
+  }
+  if (!got_initial_pose_) {
     return;
   }
   boost::recursive_mutex::scoped_lock lr(configuration_mutex_);
@@ -1201,10 +1223,6 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
 
   pf_vector_t delta = pf_vector_zero();
 
-  static int update_count = 0;
-
-  static ros::Time last_update_ts_ = ros::Time(0.0);
-  ros::Time now = ros::Time::now();
   ros::Duration update_dt = now - last_update_ts_;
 
   if(pf_init_)
@@ -1230,8 +1248,12 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
 
     // Set the laser update flags
     if(update) {
+      const double update_dt_sec = update_dt.toSec();
+      if (update_dt_sec > 0.0 && update_dt_sec < 5.0) {
+        update_dt_avg_ = 0.90 * update_dt_avg_ + 0.10 * update_dt_sec;
+      }
       last_update_ts_ = now;
-      update_count++;
+      update_count_++;
       for(unsigned int i=0; i < lasers_update_.size(); i++)
         lasers_update_[i] = true;
     }
@@ -1471,8 +1493,12 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
       pose_pub_.publish(p);
       last_published_pose = p;
 
-      ROS_WARN_THROTTLE(0.5, "%d: New pose: %6.3f %6.3f %6.3f",
-               update_count,
+      ROS_WARN_THROTTLE(0.5, "%d: Rates: input: %2.1f output: %2.1f",
+               update_count_,
+               1.0/laser_scan_dt_avg_,
+               1.0/update_dt_avg_);
+
+      ROS_WARN_THROTTLE(0.5, "New pose: %6.3f %6.3f %6.3f",
                hyps[max_weight_hyp].pf_pose_mean.v[0],
                hyps[max_weight_hyp].pf_pose_mean.v[1],
                hyps[max_weight_hyp].pf_pose_mean.v[2]);
@@ -1541,7 +1567,6 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
     }
 
     // Is it time to save our last pose to the param server
-    ros::Time now = ros::Time::now();
     if((save_pose_period.toSec() > 0.0) &&
        (now - save_pose_last_time) >= save_pose_period)
     {
@@ -1606,6 +1631,8 @@ AmclNode::handleInitialPoseMessage(const geometry_msgs::PoseWithCovarianceStampe
   pose_new = pose_old * tx_odom_tf2;
 
   // Transform into the global frame
+
+  got_initial_pose_ = true;
 
   ROS_INFO("Setting pose (%.6f): %.3f %.3f %.3f",
            ros::Time::now().toSec(),
