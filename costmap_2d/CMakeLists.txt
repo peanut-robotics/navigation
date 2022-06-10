@@ -137,6 +137,7 @@ target_link_libraries(costmap_2d_node
 )
 
 ## Configure Tests
+set(CATKIN_ENABLE_TESTING OFF)
 if(CATKIN_ENABLE_TESTING)
   # Find package test dependencies
   find_package(rostest REQUIRED)

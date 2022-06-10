@@ -81,6 +81,7 @@ function(copy_test_data)
 endfunction()
 
 ## Tests
+set(CATKIN_ENABLE_TESTING OFF)
 if(CATKIN_ENABLE_TESTING)
   copy_test_data( FILES
       test/testmap.bmp

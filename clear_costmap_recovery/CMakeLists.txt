@@ -37,6 +37,7 @@ target_link_libraries(clear_costmap_recovery ${catkin_LIBRARIES})
 
 
 ## Configure Tests
+set(CATKIN_ENABLE_TESTING OFF)
 if(CATKIN_ENABLE_TESTING)
   # Find package test dependencies
   find_package(rostest REQUIRED)

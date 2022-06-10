@@ -147,6 +147,7 @@ install(DIRECTORY include/${PROJECT_NAME}/
   PATTERN ".svn" EXCLUDE
 )
 
+set(CATKIN_ENABLE_TESTING OFF)
 if(CATKIN_ENABLE_TESTING)
   find_package(rostest)
   catkin_add_gtest(base_local_planner_utest

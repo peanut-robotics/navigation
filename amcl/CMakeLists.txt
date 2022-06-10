@@ -116,6 +116,7 @@ install(DIRECTORY examples/
 )
 
 ## Configure Tests
+set(CATKIN_ENABLE_TESTING OFF)
 if(CATKIN_ENABLE_TESTING)
   find_package(rostest REQUIRED)
 

@@ -38,6 +38,7 @@ install(DIRECTORY include/${PROJECT_NAME}/
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 )
 
+set(CATKIN_ENABLE_TESTING OFF)
 if(CATKIN_ENABLE_TESTING)
   catkin_add_gtest(voxel_grid_tests test/voxel_grid_tests.cpp)
   target_link_libraries(voxel_grid_tests
