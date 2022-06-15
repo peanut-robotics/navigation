@@ -1493,12 +1493,12 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
       pose_pub_.publish(p);
       last_published_pose = p;
 
-      ROS_WARN_THROTTLE(0.5, "%d: Rates: input: %2.1f output: %2.1f",
+      ROS_DEBUG_THROTTLE(0.5, "%d: Rates: input: %2.1f output: %2.1f",
                update_count_,
                1.0/laser_scan_dt_avg_,
                1.0/update_dt_avg_);
 
-      ROS_WARN_THROTTLE(0.5, "New pose: %6.3f %6.3f %6.3f",
+      ROS_DEBUG_THROTTLE(0.5, "New pose: %6.3f %6.3f %6.3f",
                hyps[max_weight_hyp].pf_pose_mean.v[0],
                hyps[max_weight_hyp].pf_pose_mean.v[1],
                hyps[max_weight_hyp].pf_pose_mean.v[2]);
