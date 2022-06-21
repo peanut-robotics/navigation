@@ -795,7 +795,7 @@ void AmclNode::savePoseToServer()
 
   double yaw = tf2::getYaw(map_pose.getRotation());
 
-  ROS_INFO("Saving pose to server. x: %.3f, y: %.3f", map_pose.getOrigin().x(), map_pose.getOrigin().y() );
+  ROS_DEBUG("Saving pose to server. x: %.3f, y: %.3f", map_pose.getOrigin().x(), map_pose.getOrigin().y() );
 
   private_nh_.setParam("initial_pose_x", map_pose.getOrigin().x());
   private_nh_.setParam("initial_pose_y", map_pose.getOrigin().y());
@@ -811,7 +811,7 @@ void AmclNode::savePoseToServer()
   double std_x = sqrt(last_published_pose.pose.covariance[6*0+0]);
   double std_y = sqrt(last_published_pose.pose.covariance[6*1+1]);
   double std_yaw = sqrt(last_published_pose.pose.covariance[6*5+5]);
-  ROS_INFO("std_x: %f std_y: %f std_yaw: %f", std_x, std_y, std_yaw);
+  ROS_DEBUG("std_x: %f std_y: %f std_yaw: %f", std_x, std_y, std_yaw);
 }
 
 void AmclNode::updatePoseFromServer()
