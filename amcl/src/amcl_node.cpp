@@ -795,7 +795,7 @@ void AmclNode::savePoseToServer()
 
   double yaw = tf2::getYaw(map_pose.getRotation());
 
-  ROS_DEBUG("Saving pose to server. x: %.3f, y: %.3f", map_pose.getOrigin().x(), map_pose.getOrigin().y() );
+  ROS_DEBUG_THROTTLE(1.0, "Saving pose to server. x: %.3f, y: %.3f", map_pose.getOrigin().x(), map_pose.getOrigin().y() );
 
   private_nh_.setParam("initial_pose_x", map_pose.getOrigin().x());
   private_nh_.setParam("initial_pose_y", map_pose.getOrigin().y());
@@ -811,7 +811,7 @@ void AmclNode::savePoseToServer()
   double std_x = sqrt(last_published_pose.pose.covariance[6*0+0]);
   double std_y = sqrt(last_published_pose.pose.covariance[6*1+1]);
   double std_yaw = sqrt(last_published_pose.pose.covariance[6*5+5]);
-  ROS_DEBUG("std_x: %f std_y: %f std_yaw: %f", std_x, std_y, std_yaw);
+  ROS_DEBUG_THROTTLE(1.0, "std_x: %f std_y: %f std_yaw: %f", std_x, std_y, std_yaw);
 }
 
 void AmclNode::updatePoseFromServer()
@@ -1336,7 +1336,7 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
     // wrapping angle to [-pi .. pi]
     angle_increment = fmod(angle_increment + 5*M_PI, 2*M_PI) - M_PI;
 
-    ROS_DEBUG("Laser %d angles in base frame: min: %.3f inc: %.3f", laser_index, angle_min, angle_increment);
+    // ROS_DEBUG("Laser %d angles in base frame: min: %.3f inc: %.3f", laser_index, angle_min, angle_increment);
 
     // Apply range min/max thresholds, if the user supplied them
     if(laser_max_range_ > 0.0)
@@ -1386,7 +1386,7 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
     }
 
     pf_sample_set_t* set = pf_->sets + pf_->current_set;
-    ROS_DEBUG("Num samples: %d\n", set->sample_count);
+    // ROS_DEBUG("Num samples: %d\n", set->sample_count);
 
     // Publish the resulting cloud
     // TODO: set maximum rate for publishing
@@ -1441,10 +1441,10 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
 
     if(max_weight > 0.0)
     {
-      ROS_DEBUG("Max weight pose: %.3f %.3f %.3f",
-                hyps[max_weight_hyp].pf_pose_mean.v[0],
-                hyps[max_weight_hyp].pf_pose_mean.v[1],
-                hyps[max_weight_hyp].pf_pose_mean.v[2]);
+      // ROS_DEBUG("Max weight pose: %.3f %.3f %.3f",
+      //           hyps[max_weight_hyp].pf_pose_mean.v[0],
+      //           hyps[max_weight_hyp].pf_pose_mean.v[1],
+      //           hyps[max_weight_hyp].pf_pose_mean.v[2]);
 
       /*
          puts("");
