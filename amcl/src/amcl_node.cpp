@@ -502,9 +502,6 @@ AmclNode::AmclNode() :
                                                    this, _1));
 
   ROS_INFO_STREAM("Subscribed to laser topic. " << scan_topic_);
-  ros::Duration d(1.0);
-  d.sleep(); // xx!!
-
   initial_pose_sub_ = nh_.subscribe("initialpose", 2, &AmclNode::initialPoseReceived, this);
 
 
@@ -533,6 +530,10 @@ AmclNode::AmclNode() :
 
   diagnosic_updater_.setHardwareID("None");
   diagnosic_updater_.add("Standard deviation", this, &AmclNode::standardDeviationDiagnostics);
+
+  ros::Duration d(1.0);
+  d.sleep(); // xx!!
+  ROS_INFO("AMCL Node ready");
 }
 
 void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level)
