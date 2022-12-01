@@ -502,8 +502,11 @@ AmclNode::AmclNode() :
                                                    this, _1));
 
   ROS_INFO_STREAM("Subscribed to laser topic. " << scan_topic_);
+  ros::Duration d(1.0);
+  d.sleep(); // xx!!
 
   initial_pose_sub_ = nh_.subscribe("initialpose", 2, &AmclNode::initialPoseReceived, this);
+
 
   if(use_map_topic_) {
     map_sub_ = nh_.subscribe("map", 1, &AmclNode::mapReceived, this);
