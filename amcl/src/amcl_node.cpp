@@ -531,8 +531,6 @@ AmclNode::AmclNode() :
   diagnosic_updater_.setHardwareID("None");
   diagnosic_updater_.add("Standard deviation", this, &AmclNode::standardDeviationDiagnostics);
 
-  ros::Duration d(1.0);
-  d.sleep(); // xx!!
   ROS_INFO("AMCL Node ready");
 }
 
@@ -1377,7 +1375,7 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
     }
 
     lasers_[laser_index]->UpdateSensor(pf_, (AMCLSensorData*)&ldata);
-    ROS_INFO("w_avg slow: %e fast: %e\n", pf_->w_slow, pf_->w_fast); // xx!!
+    ROS_INFO("w_avg slow: %0.3f fast: %0.3f", pf_->w_slow, pf_->w_fast); // xx!!
 
     lasers_update_[laser_index] = false;
 
