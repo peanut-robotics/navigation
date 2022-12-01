@@ -224,21 +224,30 @@ bool AMCLOdom::UpdateAction(pf_t *pf, AMCLSensorData *data)
                        ndata->delta.v[1]*ndata->delta.v[1]);
     delta_rot = ndata->delta.v[2];
     printf("delta_trans: %0.3f delta_rot: %0.3f\n", delta_trans, delta_rot); // xx!!
-    // xx!! try a minimum delta_trans
-    if (delta_trans < 0.01) {
-      delta_trans = 0.01;
-    }
-    if (delta_rot < 0.01) {
-      delta_rot = 0.01;
-    }
 
     // Precompute a couple of things
     double trans_hat_stddev = sqrt( alpha3 * (delta_trans*delta_trans) +
                                     alpha4 * (delta_rot*delta_rot) );
+
     double rot_hat_stddev = sqrt( alpha1 * (delta_rot*delta_rot) +
                                   alpha2 * (delta_trans*delta_trans) );
     double strafe_hat_stddev = sqrt( alpha4 * (delta_rot*delta_rot) +
                                      alpha5 * (delta_trans*delta_trans) );
+    // xx!! try a minimum noise
+    double min_trans = 0.01;
+    double min_rot = 0.01;
+    double trans_stddev_min = sqrt(alpha3 * (min_trans*min_trans) + alpha4 * (min_rot*min_rot));
+    double rot_stddev_min = sqrt(alpha2 * (min_trans*min_trans) + alpha1 * (min_rot*min_rot));
+    double strafe_stddev_min = sqrt(alpha5 * (min_trans*min_trans) + alpha4 * (min_rot*min_rot));
+    if (trans_hat_stddev < trans_stddev_min) {
+      trans_hat_stddev = trans_stddev_min;
+    }
+    if (rot_hat_stddev < rot_stddev_min) {
+      rot_hat_stddev = rot_stddev_min;
+    }
+    if (strafe_hat_stddev < strafe_stddev_min) {
+      strafe_hat_stddev = strafe_stddev_min;
+    }
 
     for (int i = 0; i < set->sample_count; i++)
     {
