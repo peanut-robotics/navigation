@@ -132,14 +132,6 @@ bool AMCLOdom::UpdateAction(pf_t *pf, AMCLSensorData *data)
                        ndata->delta.v[1]*ndata->delta.v[1]);
 
     delta_rot = ndata->delta.v[2];
-    printf("delta_trans: %e delta_rot: %e\n", delta_trans, delta_rot); // xx!!
-    // xx!! try a minimum delta_trans
-    if (delta_trans < 0.01) {
-      delta_trans = 0.01;
-    }
-    if (delta_rot < 0.01) {
-      delta_rot = 0.01;
-    }
 
     // Precompute a couple of things
     double trans_hat_stddev = (alpha3 * (delta_trans*delta_trans) +
@@ -231,6 +223,14 @@ bool AMCLOdom::UpdateAction(pf_t *pf, AMCLSensorData *data)
     delta_trans = sqrt(ndata->delta.v[0]*ndata->delta.v[0] +
                        ndata->delta.v[1]*ndata->delta.v[1]);
     delta_rot = ndata->delta.v[2];
+    printf("delta_trans: %0.3f delta_rot: %0.3f\n", delta_trans, delta_rot); // xx!!
+    // xx!! try a minimum delta_trans
+    if (delta_trans < 0.01) {
+      delta_trans = 0.01;
+    }
+    if (delta_rot < 0.01) {
+      delta_rot = 0.01;
+    }
 
     // Precompute a couple of things
     double trans_hat_stddev = sqrt( alpha3 * (delta_trans*delta_trans) +

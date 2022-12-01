@@ -103,7 +103,8 @@ pf_t *pf_alloc(int min_samples, int max_samples,
 
   pf->w_slow = 0.0;
   pf->w_fast = 0.0;
-
+  pf->total = 0.0;
+  pf->sample_count = 0;
   pf->alpha_slow = alpha_slow;
   pf->alpha_fast = alpha_fast;
 
@@ -282,6 +283,8 @@ void pf_update_sensor(pf_t *pf, pf_sensor_model_fn_t sensor_fn, void *sensor_dat
   // xx!! n_effective is 1/quality^2 ?
   set->n_effective = 0;
 
+  pf->total = total;
+  pf->sample_count = set->sample_count;
   if (total > 0.0)
   {
     // Normalize weights

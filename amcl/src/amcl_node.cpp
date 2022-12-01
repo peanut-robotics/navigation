@@ -1375,7 +1375,8 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
     }
 
     lasers_[laser_index]->UpdateSensor(pf_, (AMCLSensorData*)&ldata);
-    ROS_INFO("w_avg slow: %0.3f fast: %0.3f", pf_->w_slow, pf_->w_fast); // xx!!
+    ROS_INFO("total: %0.3f samples: %d w_avg slow: %0.3f fast: %0.3f",
+      pf_->total, pf_->sample_count, pf_->w_slow, pf_->w_fast); // xx!!
 
     lasers_update_[laser_index] = false;
 
