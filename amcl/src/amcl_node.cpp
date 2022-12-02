@@ -1374,9 +1374,28 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
               (i * angle_increment);
     }
 
+    double total_before = 0.0;
+    double total_after = 0.0;
+    pf_sample_t* sample = NULL;
+    pf_sample_set_t* set = pf_->sets + pf_->current_set;
+
+    for (int j = 0; j < set->sample_count; j++) {
+      sample = set->samples + j;
+      total_before += sample->weight;
+    }
+
     lasers_[laser_index]->UpdateSensor(pf_, (AMCLSensorData*)&ldata);
-    ROS_INFO("total: %0.3f samples: %d w_avg slow: %0.3f fast: %0.3f",
-      pf_->total, pf_->sample_count, pf_->w_slow, pf_->w_fast); // xx!!
+
+    set = pf_->sets + pf_->current_set;
+    for (int j = 0; j < set->sample_count; j++) {
+      sample = set->samples + j;
+      total_after += sample->weight;
+    }
+    ROS_INFO("total before: %0.3f after: %0.3f", total_before, total_after);
+
+    double total_percent = 100.0 * total_after / lasers_[laser_index]->max_beams / (double) pf_->sample_count;
+    ROS_INFO("total: %0.3f %0.1f%% samples: %d w_avg slow: %0.3f fast: %0.3f",
+      pf_->total, total_percent, pf_->sample_count, pf_->w_slow, pf_->w_fast); // xx!!
 
     lasers_update_[laser_index] = false;
 
@@ -1389,7 +1408,6 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
       resampled = true;
     }
 
-    pf_sample_set_t* set = pf_->sets + pf_->current_set;
     // ROS_DEBUG("Num samples: %d\n", set->sample_count);
 
     // Publish the resulting cloud

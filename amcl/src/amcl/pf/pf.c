@@ -276,7 +276,7 @@ void pf_update_sensor(pf_t *pf, pf_sensor_model_fn_t sensor_fn, void *sensor_dat
 
   // Compute the sample weights
   total = (*sensor_fn) (sensor_data, set);
-  printf("total: %e samples: %d\n", total, set->sample_count); // xx!!
+  printf("total: %0.3f samples: %d\n", total, set->sample_count); // xx!!
 
   // xx!! total, w_avg, w_slow and wf_fast should all be ineresting
   // xx!! w_avg is quality?
@@ -297,7 +297,7 @@ void pf_update_sensor(pf_t *pf, pf_sensor_model_fn_t sensor_fn, void *sensor_dat
       set->n_effective += sample->weight*sample->weight;
     }
     // Update running averages of likelihood of samples (Prob Rob p258)
-    w_avg /= set->sample_count;
+    // w_avg /= set->sample_count; // xx!! looks wrong, samples were already normalized
     if(pf->w_slow == 0.0)
       pf->w_slow = w_avg;
     else
