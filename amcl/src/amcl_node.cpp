@@ -199,6 +199,7 @@ class AmclNode
     ros::Duration save_pose_period;
 
     geometry_msgs::PoseWithCovarianceStamped last_published_pose;
+    double last_match_fraction;
 
     map_t* map_;
     char* mapdata;
@@ -259,9 +260,12 @@ class AmclNode
 
     diagnostic_updater::Updater diagnosic_updater_;
     void standardDeviationDiagnostics(diagnostic_updater::DiagnosticStatusWrapper& diagnostic_status);
+    void accuracyDiagnostics(diagnostic_updater::DiagnosticStatusWrapper& diagnostic_status);
     double std_warn_level_x_;
     double std_warn_level_y_;
     double std_warn_level_yaw_;
+    double accuracy_error_level_;
+    double accuracy_warn_level_;
 
     amcl_hyp_t* initial_pose_hyp_;
     bool first_map_received_;
@@ -463,6 +467,8 @@ AmclNode::AmclNode() :
   private_nh_.param("std_warn_level_x", std_warn_level_x_, 0.2);
   private_nh_.param("std_warn_level_y", std_warn_level_y_, 0.2);
   private_nh_.param("std_warn_level_yaw", std_warn_level_yaw_, 0.1);
+  private_nh_.param("error_level_accuracy", accuracy_error_level_, 0.2);
+  private_nh_.param("warn_level_accuracy", accuracy_warn_level_, 0.4);
 
   transform_tolerance_.fromSec(tmp_tol);
 
@@ -530,6 +536,7 @@ AmclNode::AmclNode() :
 
   diagnosic_updater_.setHardwareID("None");
   diagnosic_updater_.add("Standard deviation", this, &AmclNode::standardDeviationDiagnostics);
+  diagnosic_updater_.add("Accuracy", this, &AmclNode::accuracyDiagnostics);
 
   ROS_INFO("AMCL Node ready");
 }
@@ -1380,8 +1387,9 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
 
     lasers_[laser_index]->UpdateSensor(pf_, (AMCLSensorData*)&ldata);
 
-    double total_percent = 100.0 * pf_->total / lasers_[laser_index]->max_beams;
-    double fast_percent = 100.0 * pf_->w_fast / lasers_[laser_index]->max_beams;
+    double total_percent = 100.0 * pf_->total / (double) lasers_[laser_index]->max_beams;
+    double fast_percent = 100.0 * pf_->w_fast / (double) lasers_[laser_index]->max_beams;
+    this->last_match_fraction = pf_->w_fast / (double) lasers_[laser_index]->max_beams;
     ROS_INFO("total: %0.1f%% samples: %d w_avg slow: %0.3f fast: %0.3f %0.1f%%",
       total_percent, pf_->sample_count, pf_->w_slow, pf_->w_fast, fast_percent); // xx!!
 
@@ -1711,6 +1719,20 @@ AmclNode::standardDeviationDiagnostics(diagnostic_updater::DiagnosticStatusWrapp
   }
   else
   {
+    diagnostic_status.summary(diagnostic_msgs::DiagnosticStatus::OK, "OK");
+  }
+}
+
+void
+AmclNode::accuracyDiagnostics(diagnostic_updater::DiagnosticStatusWrapper& diagnostic_status) {
+  diagnostic_status.add("match_fraction", this->last_match_fraction); // 0..1
+  diagnostic_status.add("accuracy_error_level", this->accuracy_error_level_);
+  diagnostic_status.add("accuracy_warn_level", this->accuracy_warn_level_);
+
+  if (this->last_match_fraction < this->accuracy_warn_level_) {
+    diagnostic_status.summary(diagnostic_msgs::DiagnosticStatus::WARN, "Bad accuracy");
+  }
+  else {
     diagnostic_status.summary(diagnostic_msgs::DiagnosticStatus::OK, "OK");
   }
 }
