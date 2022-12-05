@@ -278,6 +278,7 @@ class AmclNode
 
     int max_beams_, min_particles_, max_particles_;
     double alpha1_, alpha2_, alpha3_, alpha4_, alpha5_;
+    double min_trans_, min_rot_;
     double alpha_slow_, alpha_fast_;
     double z_hit_, z_short_, z_max_, z_rand_, sigma_hit_, lambda_short_;
   //beam skip related params
@@ -394,6 +395,8 @@ AmclNode::AmclNode() :
   private_nh_.param("odom_alpha3", alpha3_, 0.2);
   private_nh_.param("odom_alpha4", alpha4_, 0.2);
   private_nh_.param("odom_alpha5", alpha5_, 0.2);
+  private_nh_.param("odom_min_trans", min_trans_, 0.001);
+  private_nh_.param("odom_min_rot", min_rot_, 0.001);
 
   private_nh_.param("do_beamskip", do_beamskip_, false);
   private_nh_.param("beam_skip_distance", beam_skip_distance_, 0.5);
@@ -581,6 +584,8 @@ void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level)
   alpha3_ = config.odom_alpha3;
   alpha4_ = config.odom_alpha4;
   alpha5_ = config.odom_alpha5;
+  min_trans_ = config.odom_min_trans;
+  min_rot_ = config.odom_min_rot;
 
   z_hit_ = config.laser_z_hit;
   z_short_ = config.laser_z_short;
@@ -659,7 +664,7 @@ void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level)
   delete odom_;
   odom_ = new AMCLOdom();
   ROS_ASSERT(odom_);
-  odom_->SetModel( odom_model_type_, alpha1_, alpha2_, alpha3_, alpha4_, alpha5_ );
+  odom_->SetModel( odom_model_type_, alpha1_, alpha2_, alpha3_, alpha4_, alpha5_, min_trans_, min_rot_);
   // Laser
   delete laser_;
   laser_ = new AMCLLaser(max_beams_, map_);
@@ -966,7 +971,7 @@ AmclNode::handleMapMessage(const nav_msgs::OccupancyGrid& msg)
   delete odom_;
   odom_ = new AMCLOdom();
   ROS_ASSERT(odom_);
-  odom_->SetModel( odom_model_type_, alpha1_, alpha2_, alpha3_, alpha4_, alpha5_ );
+  odom_->SetModel( odom_model_type_, alpha1_, alpha2_, alpha3_, alpha4_, alpha5_, min_trans_, min_rot_);
   // Laser
   delete laser_;
   laser_ = new AMCLLaser(max_beams_, map_);
@@ -1387,11 +1392,11 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
 
     lasers_[laser_index]->UpdateSensor(pf_, (AMCLSensorData*)&ldata);
 
-    double total_percent = 100.0 * pf_->total / (double) lasers_[laser_index]->max_beams;
-    double fast_percent = 100.0 * pf_->w_fast / (double) lasers_[laser_index]->max_beams;
-    this->last_match_fraction = pf_->w_fast / (double) lasers_[laser_index]->max_beams;
+    double total_percent = 100.0 * pf_->total;
+    double fast_percent = 100.0 * pf_->w_fast;
+    this->last_match_fraction = pf_->w_fast;
     ROS_INFO("total: %0.1f%% samples: %d w_avg slow: %0.3f fast: %0.3f %0.1f%%",
-      total_percent, pf_->sample_count, pf_->w_slow, pf_->w_fast, fast_percent); // xx!!
+      total_percent, pf_->sample_count, pf_->w_slow, pf_->w_fast, fast_percent);
 
     lasers_update_[laser_index] = false;
 

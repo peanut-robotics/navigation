@@ -169,8 +169,10 @@ double AMCLLaser::BeamModel(AMCLLaserData *data, pf_sample_set_t* set)
     p = 1.0;
 
     step = (data->range_count - 1) / (self->max_beams - 1);
+    int beam_count = 0;
     for (i = 0; i < data->range_count; i += step)
     {
+      beam_count++;
       obs_range = data->ranges[i][0];
       obs_bearing = data->ranges[i][1];
 
@@ -206,7 +208,7 @@ double AMCLLaser::BeamModel(AMCLLaserData *data, pf_sample_set_t* set)
     }
 
     sample->weight *= p;
-    total_weight += sample->weight;
+    total_weight += sample->weight / (double) beam_count;
   }
 
   return(total_weight);
@@ -249,8 +251,10 @@ double AMCLLaser::LikelihoodFieldModel(AMCLLaserData *data, pf_sample_set_t* set
     if(step < 1)
       step = 1;
 
+    int beam_count = 0;
     for (i = 0; i < data->range_count; i += step)
     {
+      beam_count++;
       obs_range = data->ranges[i][0];
       obs_bearing = data->ranges[i][1];
 
@@ -297,7 +301,7 @@ double AMCLLaser::LikelihoodFieldModel(AMCLLaserData *data, pf_sample_set_t* set
 
     assert(p >= 1.0);
     sample->weight *= p;
-    total_weight += sample->weight;
+    total_weight += sample->weight / (double) beam_count;
   }
 
   return(total_weight);
@@ -383,8 +387,10 @@ double AMCLLaser::LikelihoodFieldModelProb(AMCLLaserData *data, pf_sample_set_t*
 
     beam_ind = 0;
 
+    int beam_count = 0;
     for (i = 0; i < data->range_count; i += step, beam_ind++)
     {
+      beam_count++;
       obs_range = data->ranges[i][0];
       obs_bearing = data->ranges[i][1];
 
@@ -413,14 +419,14 @@ double AMCLLaser::LikelihoodFieldModelProb(AMCLLaserData *data, pf_sample_set_t*
       // Off-map penalized as max distance
 
       if(!MAP_VALID(self->map, mi, mj)){
-	pz += self->z_hit * max_dist_prob;
+      	pz += self->z_hit * max_dist_prob;
       }
       else{
-	z = self->map->cells[MAP_INDEX(self->map,mi,mj)].occ_dist;
-	if(z < beam_skip_distance){
-	  obs_count[beam_ind] += 1;
-	}
-	pz += self->z_hit * exp(-(z * z) / z_hit_denom);
+	      z = self->map->cells[MAP_INDEX(self->map,mi,mj)].occ_dist;
+	      if(z < beam_skip_distance){
+	        obs_count[beam_ind] += 1;
+	      }
+	      pz += self->z_hit * exp(-(z * z) / z_hit_denom);
       }
 
       // Gaussian model
@@ -435,15 +441,15 @@ double AMCLLaser::LikelihoodFieldModelProb(AMCLLaserData *data, pf_sample_set_t*
       // TODO: outlier rejection for short readings
 
       if(!do_beamskip){
-	log_p += log(pz);
+      	log_p += log(pz);
       }
       else{
-	self->temp_obs[j][beam_ind] = pz;
+	      self->temp_obs[j][beam_ind] = pz;
       }
     }
     if(!do_beamskip){
       sample->weight *= exp(log_p);
-      total_weight += sample->weight;
+      total_weight += sample->weight / (double) beam_count;
     }
   }
 
@@ -451,11 +457,11 @@ double AMCLLaser::LikelihoodFieldModelProb(AMCLLaserData *data, pf_sample_set_t*
     int skipped_beam_count = 0;
     for (beam_ind = 0; beam_ind < self->max_beams; beam_ind++){
       if((obs_count[beam_ind] / static_cast<double>(set->sample_count)) > beam_skip_threshold){
-	obs_mask[beam_ind] = true;
+      	obs_mask[beam_ind] = true;
       }
       else{
-	obs_mask[beam_ind] = false;
-	skipped_beam_count++;
+	      obs_mask[beam_ind] = false;
+	      skipped_beam_count++;
       }
     }
 
@@ -471,22 +477,22 @@ double AMCLLaser::LikelihoodFieldModelProb(AMCLLaserData *data, pf_sample_set_t*
     }
 
     for (j = 0; j < set->sample_count; j++)
-      {
-	sample = set->samples + j;
-	pose = sample->pose;
+    {
+	    sample = set->samples + j;
+	    pose = sample->pose;
 
-	log_p = 0;
+    	log_p = 0;
 
-	for (beam_ind = 0; beam_ind < self->max_beams; beam_ind++){
-	  if(error || obs_mask[beam_ind]){
-	    log_p += log(self->temp_obs[j][beam_ind]);
-	  }
-	}
+    	for (beam_ind = 0; beam_ind < self->max_beams; beam_ind++){
+	      if(error || obs_mask[beam_ind]){
+	        log_p += log(self->temp_obs[j][beam_ind]);
+	      }
+	    }
 
-	sample->weight *= exp(log_p);
+    	sample->weight *= exp(log_p);
 
-	total_weight += sample->weight;
-      }
+	    total_weight += sample->weight / (double) self->max_beams;
+    }
   }
 
   delete [] obs_count;

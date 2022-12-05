@@ -127,11 +127,13 @@ typedef struct _pf_t
 
   // Running averages, slow and fast, of likelihood
   double w_slow, w_fast;
+  // Running average of likelihood
+  double accuracy;
   double total;
   int sample_count;
 
   // Decay rates for running averages
-  double alpha_slow, alpha_fast;
+  double alpha_slow, alpha_fast, alpha_accuracy;
 
   // Function used to draw random pose samples
   pf_init_model_fn_t random_pose_fn;

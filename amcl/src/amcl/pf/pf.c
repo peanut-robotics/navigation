@@ -103,10 +103,12 @@ pf_t *pf_alloc(int min_samples, int max_samples,
 
   pf->w_slow = 0.0;
   pf->w_fast = 0.0;
+  pf->accuracy = 0.0;
   pf->total = 0.0;
   pf->sample_count = 0;
   pf->alpha_slow = alpha_slow;
   pf->alpha_fast = alpha_fast;
+  pf->alpha_accuracy = 0.10; // hard-code for now
 
   //set converged to 0
   pf_init_converged(pf);
@@ -161,6 +163,7 @@ void pf_init(pf_t *pf, pf_vector_t mean, pf_matrix_t cov)
   }
 
   pf->w_slow = pf->w_fast = 0.0;
+  pf->accuracy = 0.0;
 
   pf_pdf_gaussian_free(pdf);
 
@@ -200,6 +203,7 @@ void pf_init_model(pf_t *pf, pf_init_model_fn_t init_fn, void *init_data)
   }
 
   pf->w_slow = pf->w_fast = 0.0;
+  pf->accuracy = 0.0;
 
   // Re-compute cluster statistics
   pf_cluster_stats(pf, set);
@@ -276,28 +280,23 @@ void pf_update_sensor(pf_t *pf, pf_sensor_model_fn_t sensor_fn, void *sensor_dat
 
   // Compute the sample weights
   total = (*sensor_fn) (sensor_data, set);
-  printf("total: %0.3f samples: %d\n", total, set->sample_count); // xx!!
+  // printf("total: %0.3f samples: %d\n", total, set->sample_count);
 
-  // xx!! total, w_avg, w_slow and wf_fast should all be ineresting
-  // xx!! w_avg is quality?
-  // xx!! n_effective is 1/quality^2 ?
   set->n_effective = 0;
 
   pf->total = total;
   pf->sample_count = set->sample_count;
-  if (total > 0.0)
-  {
+  if (total > 0.0) {
     // Normalize weights
     double w_avg=0.0;
-    for (i = 0; i < set->sample_count; i++)
-    {
+    for (i = 0; i < set->sample_count; i++) {
       sample = set->samples + i;
       w_avg += sample->weight;
       sample->weight /= total;
       set->n_effective += sample->weight*sample->weight;
     }
     // Update running averages of likelihood of samples (Prob Rob p258)
-    // w_avg /= set->sample_count; // xx!! looks wrong, samples were already normalized
+    // w_avg /= set->sample_count; // this divide looks wrong, samples were already normalized
     if(pf->w_slow == 0.0)
       pf->w_slow = w_avg;
     else
@@ -306,14 +305,15 @@ void pf_update_sensor(pf_t *pf, pf_sensor_model_fn_t sensor_fn, void *sensor_dat
       pf->w_fast = w_avg;
     else
       pf->w_fast += pf->alpha_fast * (w_avg - pf->w_fast);
-    printf("w_avg: %e slow: %e fast: %e\n", w_avg, pf->w_slow, pf->w_fast); // xx!!
+    if(pf->accuracy == 0.0)
+      pf->accuracy = w_avg;
+    else
+      pf->accuracy += pf->alpha_accuracy * (w_avg - pf->accuracy);
+    // printf("w_avg: %e slow: %e fast: %e\n", w_avg, pf->w_slow, pf->w_fast);
   }
-  else
-  {
-    printf("total is zero - flying blind!\n"); // xx!!
+  else {
     // Handle zero total
-    for (i = 0; i < set->sample_count; i++)
-    {
+    for (i = 0; i < set->sample_count; i++) {
       sample = set->samples + i;
       sample->weight = 1.0 / set->sample_count;
     }
@@ -415,10 +415,9 @@ void pf_update_resample(pf_t *pf)
   set_b->sample_count = 0;
 
   w_diff = 1.0 - pf->w_fast / pf->w_slow;
-  printf("w_diff: %9.6f\n", w_diff); // xx!!
+  // printf("w_diff: %9.6f\n", w_diff);
   if(w_diff < 0.0)
     w_diff = 0.0;
-  w_diff = 0.0; // xx!! there is some bug when w_diff > 0
 
   // Can't (easily) combine low-variance sampler with KLD adaptive
   // sampling, so we'll take the more traditional route.
@@ -435,7 +434,6 @@ void pf_update_resample(pf_t *pf)
     sample_b = set_b->samples + set_b->sample_count++;
 
     if(drand48() < w_diff) {
-      printf("Random point"); // xx!!
       sample_b->pose = (pf->random_pose_fn)(pf->random_pose_data);
     }
     else
