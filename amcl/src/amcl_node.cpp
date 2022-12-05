@@ -199,7 +199,7 @@ class AmclNode
     ros::Duration save_pose_period;
 
     geometry_msgs::PoseWithCovarianceStamped last_published_pose;
-    double last_match_fraction;
+    double last_match_percent;
 
     map_t* map_;
     char* mapdata;
@@ -264,7 +264,6 @@ class AmclNode
     double std_warn_level_x_;
     double std_warn_level_y_;
     double std_warn_level_yaw_;
-    double accuracy_error_level_;
     double accuracy_warn_level_;
 
     amcl_hyp_t* initial_pose_hyp_;
@@ -467,11 +466,10 @@ AmclNode::AmclNode() :
   private_nh_.param("tf_broadcast", tf_broadcast_, true);
 
   // For diagnostics
-  private_nh_.param("std_warn_level_x", std_warn_level_x_, 0.2);
+  private_nh_.param("std_warn_level_x", std_warn_level_x_, 0.2); // cm
   private_nh_.param("std_warn_level_y", std_warn_level_y_, 0.2);
-  private_nh_.param("std_warn_level_yaw", std_warn_level_yaw_, 0.1);
-  private_nh_.param("error_level_accuracy", accuracy_error_level_, 0.2);
-  private_nh_.param("warn_level_accuracy", accuracy_warn_level_, 0.4);
+  private_nh_.param("std_warn_level_yaw", std_warn_level_yaw_, 0.1); // radians
+  private_nh_.param("warn_level_accuracy", accuracy_warn_level_, 30.0); // percent
 
   transform_tolerance_.fromSec(tmp_tol);
 
@@ -1393,10 +1391,9 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
     lasers_[laser_index]->UpdateSensor(pf_, (AMCLSensorData*)&ldata);
 
     double total_percent = 100.0 * pf_->total;
-    double fast_percent = 100.0 * pf_->w_fast;
-    this->last_match_fraction = pf_->w_fast;
-    ROS_INFO("total: %0.1f%% samples: %d w_avg slow: %0.3f fast: %0.3f %0.1f%%",
-      total_percent, pf_->sample_count, pf_->w_slow, pf_->w_fast, fast_percent);
+    this->last_match_percent = 100.0 * pf_->accuracy;
+    ROS_INFO("total: %0.1f%% samples: %d accuracy: %0.1f%%",
+      total_percent, pf_->sample_count, this->last_match_percent);
 
     lasers_update_[laser_index] = false;
 
@@ -1730,11 +1727,10 @@ AmclNode::standardDeviationDiagnostics(diagnostic_updater::DiagnosticStatusWrapp
 
 void
 AmclNode::accuracyDiagnostics(diagnostic_updater::DiagnosticStatusWrapper& diagnostic_status) {
-  diagnostic_status.add("match_fraction", this->last_match_fraction); // 0..1
-  diagnostic_status.add("accuracy_error_level", this->accuracy_error_level_);
+  diagnostic_status.add("match_percent", this->last_match_percent); // 0..100
   diagnostic_status.add("accuracy_warn_level", this->accuracy_warn_level_);
 
-  if (this->last_match_fraction < this->accuracy_warn_level_) {
+  if (this->last_match_percent < this->accuracy_warn_level_) {
     diagnostic_status.summary(diagnostic_msgs::DiagnosticStatus::WARN, "Bad accuracy");
   }
   else {
