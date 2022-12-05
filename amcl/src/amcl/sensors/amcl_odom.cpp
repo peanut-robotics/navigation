@@ -147,7 +147,7 @@ bool AMCLOdom::UpdateAction(pf_t *pf, AMCLSensorData *data)
 
     // apply a minimum noise
     double delta_trans_noise = delta_trans;
-    double delta_rot_noise = delta_rot;
+    double delta_rot_noise = fabs(delta_rot);
     if (delta_trans_noise < min_trans) {
       delta_trans_noise = min_trans;
     }
@@ -260,7 +260,7 @@ bool AMCLOdom::UpdateAction(pf_t *pf, AMCLSensorData *data)
 
     // apply a minimum noise
     double delta_trans_noise = delta_trans;
-    double delta_rot_noise = delta_rot;
+    double delta_rot_noise = fabs(delta_rot);
     if (delta_trans_noise < min_trans) {
       delta_trans_noise = min_trans;
     }

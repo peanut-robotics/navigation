@@ -466,7 +466,7 @@ AmclNode::AmclNode() :
   private_nh_.param("tf_broadcast", tf_broadcast_, true);
 
   // For diagnostics
-  private_nh_.param("std_warn_level_x", std_warn_level_x_, 0.2); // cm
+  private_nh_.param("std_warn_level_x", std_warn_level_x_, 0.2); // m
   private_nh_.param("std_warn_level_y", std_warn_level_y_, 0.2);
   private_nh_.param("std_warn_level_yaw", std_warn_level_yaw_, 0.1); // radians
   private_nh_.param("warn_level_accuracy", accuracy_warn_level_, 30.0); // percent
@@ -1384,10 +1384,6 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
               (i * angle_increment);
     }
 
-    double total_after = 0.0;
-    pf_sample_t* sample = NULL;
-    pf_sample_set_t* set = pf_->sets + pf_->current_set;
-
     lasers_[laser_index]->UpdateSensor(pf_, (AMCLSensorData*)&ldata);
 
     double total_percent = 100.0 * pf_->total;
@@ -1406,6 +1402,7 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
       resampled = true;
     }
 
+    pf_sample_set_t* set = pf_->sets + pf_->current_set;
     // ROS_DEBUG("Num samples: %d\n", set->sample_count);
 
     // Publish the resulting cloud

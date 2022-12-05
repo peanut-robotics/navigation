@@ -119,7 +119,7 @@ class AMCLLaser : public AMCLSensor
   private: pf_vector_t laser_pose;
 
   // Max beams to consider
-  public: int max_beams;
+  private: int max_beams;
 
   // Beam skipping parameters (used by LikelihoodFieldModelProb model)
   private: bool do_beamskip;
