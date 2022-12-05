@@ -208,7 +208,8 @@ double AMCLLaser::BeamModel(AMCLLaserData *data, pf_sample_set_t* set)
     }
 
     sample->weight *= p;
-    total_weight += sample->weight / (double) beam_count;
+    sample->weight /= (double) beam_count;
+    total_weight += sample->weight;
   }
 
   return(total_weight);
@@ -301,7 +302,8 @@ double AMCLLaser::LikelihoodFieldModel(AMCLLaserData *data, pf_sample_set_t* set
 
     assert(p >= 1.0);
     sample->weight *= p;
-    total_weight += sample->weight / (double) beam_count;
+    sample->weight /= (double) beam_count;
+    total_weight += sample->weight;
   }
 
   return(total_weight);
@@ -449,7 +451,8 @@ double AMCLLaser::LikelihoodFieldModelProb(AMCLLaserData *data, pf_sample_set_t*
     }
     if(!do_beamskip){
       sample->weight *= exp(log_p);
-      total_weight += sample->weight / (double) beam_count;
+      sample->weight /= (double) beam_count;
+      total_weight += sample->weight;
     }
   }
 
@@ -490,8 +493,8 @@ double AMCLLaser::LikelihoodFieldModelProb(AMCLLaserData *data, pf_sample_set_t*
 	    }
 
     	sample->weight *= exp(log_p);
-
-	    total_weight += sample->weight / (double) self->max_beams;
+      sample->weight /= (double) self->max_beams;
+	    total_weight += sample->weight;
     }
   }
 

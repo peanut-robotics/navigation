@@ -317,6 +317,9 @@ void pf_update_sensor(pf_t *pf, pf_sensor_model_fn_t sensor_fn, void *sensor_dat
       sample = set->samples + i;
       sample->weight = 1.0 / set->sample_count;
     }
+    pf->w_slow = 0.0;
+    pf->w_fast = 0.0;
+    pf->accuracy = 0.0;
   }
 
   set->n_effective = 1.0/set->n_effective;
