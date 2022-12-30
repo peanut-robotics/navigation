@@ -60,23 +60,29 @@ class AMCLOdom : public AMCLSensor
   // Default constructor
   public: AMCLOdom();
 
-  public: void SetModelDiff(double alpha1, 
-                            double alpha2, 
-                            double alpha3, 
-                            double alpha4);
-
-  public: void SetModelOmni(double alpha1, 
-                            double alpha2, 
-                            double alpha3, 
+  public: void SetModelDiff(double alpha1,
+                            double alpha2,
+                            double alpha3,
                             double alpha4,
-                            double alpha5);
+                            double min_trans,
+                            double min_rot);
+
+  public: void SetModelOmni(double alpha1,
+                            double alpha2,
+                            double alpha3,
+                            double alpha4,
+                            double alpha5,
+                            double min_trans,
+                            double min_rot);
 
   public: void SetModel( odom_model_t type,
                          double alpha1,
                          double alpha2,
                          double alpha3,
                          double alpha4,
-                         double alpha5 = 0 );
+                         double alpha5,
+                         double min_trans,
+                         double min_rot);
 
   // Update the filter based on the action model.  Returns true if the filter
   // has been updated.
@@ -84,12 +90,16 @@ class AMCLOdom : public AMCLSensor
 
   // Current data timestamp
   private: double time;
-  
+
   // Model type
   private: odom_model_t model_type;
 
   // Drift parameters
   private: double alpha1, alpha2, alpha3, alpha4, alpha5;
+
+  // Minimum drift noise to apply, per frame
+  private: double min_trans;
+  private: double min_rot;
 };
 
 

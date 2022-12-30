@@ -199,6 +199,7 @@ class AmclNode
     ros::Duration save_pose_period;
 
     geometry_msgs::PoseWithCovarianceStamped last_published_pose;
+    double last_match_percent;
 
     map_t* map_;
     char* mapdata;
@@ -259,9 +260,11 @@ class AmclNode
 
     diagnostic_updater::Updater diagnosic_updater_;
     void standardDeviationDiagnostics(diagnostic_updater::DiagnosticStatusWrapper& diagnostic_status);
+    void accuracyDiagnostics(diagnostic_updater::DiagnosticStatusWrapper& diagnostic_status);
     double std_warn_level_x_;
     double std_warn_level_y_;
     double std_warn_level_yaw_;
+    double accuracy_warn_level_;
 
     amcl_hyp_t* initial_pose_hyp_;
     bool first_map_received_;
@@ -274,6 +277,7 @@ class AmclNode
 
     int max_beams_, min_particles_, max_particles_;
     double alpha1_, alpha2_, alpha3_, alpha4_, alpha5_;
+    double min_trans_, min_rot_;
     double alpha_slow_, alpha_fast_;
     double z_hit_, z_short_, z_max_, z_rand_, sigma_hit_, lambda_short_;
   //beam skip related params
@@ -390,6 +394,8 @@ AmclNode::AmclNode() :
   private_nh_.param("odom_alpha3", alpha3_, 0.2);
   private_nh_.param("odom_alpha4", alpha4_, 0.2);
   private_nh_.param("odom_alpha5", alpha5_, 0.2);
+  private_nh_.param("odom_min_trans", min_trans_, 0.001);
+  private_nh_.param("odom_min_rot", min_rot_, 0.001);
 
   private_nh_.param("do_beamskip", do_beamskip_, false);
   private_nh_.param("beam_skip_distance", beam_skip_distance_, 0.5);
@@ -460,9 +466,10 @@ AmclNode::AmclNode() :
   private_nh_.param("tf_broadcast", tf_broadcast_, true);
 
   // For diagnostics
-  private_nh_.param("std_warn_level_x", std_warn_level_x_, 0.2);
+  private_nh_.param("std_warn_level_x", std_warn_level_x_, 0.2); // m
   private_nh_.param("std_warn_level_y", std_warn_level_y_, 0.2);
-  private_nh_.param("std_warn_level_yaw", std_warn_level_yaw_, 0.1);
+  private_nh_.param("std_warn_level_yaw", std_warn_level_yaw_, 0.1); // radians
+  private_nh_.param("warn_level_accuracy", accuracy_warn_level_, 30.0); // percent
 
   transform_tolerance_.fromSec(tmp_tol);
 
@@ -502,8 +509,8 @@ AmclNode::AmclNode() :
                                                    this, _1));
 
   ROS_INFO_STREAM("Subscribed to laser topic. " << scan_topic_);
-
   initial_pose_sub_ = nh_.subscribe("initialpose", 2, &AmclNode::initialPoseReceived, this);
+  ROS_INFO("Subscribed to pose topic.");
 
   if(use_map_topic_) {
     map_sub_ = nh_.subscribe("map", 1, &AmclNode::mapReceived, this);
@@ -530,6 +537,9 @@ AmclNode::AmclNode() :
 
   diagnosic_updater_.setHardwareID("None");
   diagnosic_updater_.add("Standard deviation", this, &AmclNode::standardDeviationDiagnostics);
+  diagnosic_updater_.add("Accuracy", this, &AmclNode::accuracyDiagnostics);
+
+  ROS_INFO("AMCL Node ready");
 }
 
 void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level)
@@ -572,6 +582,8 @@ void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level)
   alpha3_ = config.odom_alpha3;
   alpha4_ = config.odom_alpha4;
   alpha5_ = config.odom_alpha5;
+  min_trans_ = config.odom_min_trans;
+  min_rot_ = config.odom_min_rot;
 
   z_hit_ = config.laser_z_hit;
   z_short_ = config.laser_z_short;
@@ -650,7 +662,7 @@ void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level)
   delete odom_;
   odom_ = new AMCLOdom();
   ROS_ASSERT(odom_);
-  odom_->SetModel( odom_model_type_, alpha1_, alpha2_, alpha3_, alpha4_, alpha5_ );
+  odom_->SetModel( odom_model_type_, alpha1_, alpha2_, alpha3_, alpha4_, alpha5_, min_trans_, min_rot_);
   // Laser
   delete laser_;
   laser_ = new AMCLLaser(max_beams_, map_);
@@ -957,7 +969,7 @@ AmclNode::handleMapMessage(const nav_msgs::OccupancyGrid& msg)
   delete odom_;
   odom_ = new AMCLOdom();
   ROS_ASSERT(odom_);
-  odom_->SetModel( odom_model_type_, alpha1_, alpha2_, alpha3_, alpha4_, alpha5_ );
+  odom_->SetModel( odom_model_type_, alpha1_, alpha2_, alpha3_, alpha4_, alpha5_, min_trans_, min_rot_);
   // Laser
   delete laser_;
   laser_ = new AMCLLaser(max_beams_, map_);
@@ -1374,6 +1386,11 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
 
     lasers_[laser_index]->UpdateSensor(pf_, (AMCLSensorData*)&ldata);
 
+    double total_percent = 100.0 * pf_->total;
+    this->last_match_percent = 100.0 * pf_->accuracy;
+    ROS_INFO("total: %0.1f%% samples: %d accuracy: %0.1f%%",
+      total_percent, pf_->sample_count, this->last_match_percent);
+
     lasers_update_[laser_index] = false;
 
     pf_odom_pose_ = pose;
@@ -1701,6 +1718,19 @@ AmclNode::standardDeviationDiagnostics(diagnostic_updater::DiagnosticStatusWrapp
   }
   else
   {
+    diagnostic_status.summary(diagnostic_msgs::DiagnosticStatus::OK, "OK");
+  }
+}
+
+void
+AmclNode::accuracyDiagnostics(diagnostic_updater::DiagnosticStatusWrapper& diagnostic_status) {
+  diagnostic_status.add("match_percent", this->last_match_percent); // 0..100
+  diagnostic_status.add("accuracy_warn_level", this->accuracy_warn_level_);
+
+  if (this->last_match_percent < this->accuracy_warn_level_) {
+    diagnostic_status.summary(diagnostic_msgs::DiagnosticStatus::WARN, "Bad accuracy");
+  }
+  else {
     diagnostic_status.summary(diagnostic_msgs::DiagnosticStatus::OK, "OK");
   }
 }
