@@ -1388,8 +1388,8 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
 
     double total_percent = 100.0 * pf_->total;
     this->last_match_percent = 100.0 * pf_->accuracy;
-    ROS_INFO("total: %0.1f%% samples: %d accuracy: %0.1f%%",
-      total_percent, pf_->sample_count, this->last_match_percent);
+    // ROS_INFO("total: %0.1f%% samples: %d accuracy: %0.1f%%",
+    //   total_percent, pf_->sample_count, this->last_match_percent);
 
     lasers_update_[laser_index] = false;
 
