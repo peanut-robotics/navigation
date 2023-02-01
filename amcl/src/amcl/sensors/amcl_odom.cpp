@@ -33,6 +33,8 @@
 #include <math.h>
 
 #include "amcl/sensors/amcl_odom.h"
+// roscpp
+#include "ros/ros.h"
 
 using namespace amcl;
 
@@ -264,6 +266,7 @@ bool AMCLOdom::UpdateAction(pf_t *pf, AMCLSensorData *data)
     if (delta_trans_noise < min_trans) {
       delta_trans_noise = min_trans;
     }
+    // ROS_INFO_STREAM("rot: " << delta_rot_noise << " min: " << min_rot);
     if (delta_rot_noise < min_rot) {
       delta_rot_noise = min_rot;
     }

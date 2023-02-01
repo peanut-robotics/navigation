@@ -171,6 +171,7 @@ class AmclNode
                         nav_msgs::SetMap::Response& res);
 
     void laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan);
+    void laserReceived_(const sensor_msgs::LaserScanConstPtr& laser_scan);
     void initialPoseReceived(const geometry_msgs::PoseWithCovarianceStampedConstPtr& msg);
     void handleInitialPoseMessage(const geometry_msgs::PoseWithCovarianceStamped& msg);
     void mapReceived(const nav_msgs::OccupancyGridConstPtr& msg);
@@ -1160,6 +1161,15 @@ AmclNode::setMapCallback(nav_msgs::SetMap::Request& req,
 void
 AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
 {
+  int n = 3;
+  for (int ii = 0; ii < n; ii++) {
+    laserReceived_(laser_scan);
+  }
+}
+
+void
+AmclNode::laserReceived_(const sensor_msgs::LaserScanConstPtr& laser_scan)
+{
   std::string laser_scan_frame_id = stripSlash(laser_scan->header.frame_id);
   const auto now = ros::Time::now();
   if (last_laser_received_ts_ != ros::Time(0.0)) {
@@ -1255,6 +1265,7 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
     if (update_dt > ros::Duration(update_max_dt_)) {
       update = true; // too low
     }
+    update = true; // xx!!
     update = update || m_force_update;
     m_force_update=false;
 
@@ -1410,7 +1421,7 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
     if (!m_force_update)
     {
       geometry_msgs::PoseArray cloud_msg;
-      cloud_msg.header.stamp = ros::Time::now();
+      cloud_msg.header.stamp = laser_scan->header.stamp;
       cloud_msg.header.frame_id = global_frame_id_;
       cloud_msg.poses.resize(set->sample_count);
       for(int i=0;i<set->sample_count;i++)
@@ -1546,7 +1557,10 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
       tf2::convert(odom_to_map.pose, latest_tf_);
       latest_tf_valid_ = true;
 
-      if (tf_broadcast_ == true)
+    ros::Duration scan_age = ros::Time::now() - laser_scan->header.stamp;
+    ROS_INFO_STREAM("laser is behind by: " << scan_age.toSec());
+
+    if (tf_broadcast_ == true)
       {
         // We want to send a transform that is good up until a
         // tolerance time so that odom can be used
