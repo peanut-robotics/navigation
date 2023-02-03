@@ -171,7 +171,6 @@ class AmclNode
                         nav_msgs::SetMap::Response& res);
 
     void laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan);
-    void laserReceived_(const sensor_msgs::LaserScanConstPtr& laser_scan);
     void initialPoseReceived(const geometry_msgs::PoseWithCovarianceStampedConstPtr& msg);
     void handleInitialPoseMessage(const geometry_msgs::PoseWithCovarianceStamped& msg);
     void mapReceived(const nav_msgs::OccupancyGridConstPtr& msg);
@@ -1164,15 +1163,6 @@ AmclNode::setMapCallback(nav_msgs::SetMap::Request& req,
 void
 AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
 {
-  int n = 3;
-  for (int ii = 0; ii < n; ii++) {
-    laserReceived_(laser_scan);
-  }
-}
-
-void
-AmclNode::laserReceived_(const sensor_msgs::LaserScanConstPtr& laser_scan)
-{
   std::string laser_scan_frame_id = stripSlash(laser_scan->header.frame_id);
   const auto now = ros::Time::now();
   if (last_laser_received_ts_ != ros::Time(0.0)) {
@@ -1560,7 +1550,7 @@ AmclNode::laserReceived_(const sensor_msgs::LaserScanConstPtr& laser_scan)
       latest_tf_valid_ = true;
 
     ros::Duration scan_age = ros::Time::now() - laser_scan->header.stamp;
-    ROS_INFO_STREAM("laser is behind by: " << scan_age.toSec());
+    // ROS_INFO_STREAM("laser is behind by: " << scan_age.toSec());
 
     if (tf_broadcast_ == true)
       {
