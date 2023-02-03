@@ -221,6 +221,7 @@ class AmclNode
     pf_vector_t pf_odom_pose_;
     double d_thresh_, a_thresh_;
     double update_min_dt_, update_max_dt_;
+    int multi_process_;
     int resample_interval_;
     int resample_count_;
     double laser_min_range_;
@@ -454,6 +455,7 @@ AmclNode::AmclNode() :
 
   private_nh_.param("update_min_dt", update_min_dt_, 0.10);
   private_nh_.param("update_max_dt", update_max_dt_, 0.25); // update at least this often
+  private_nh_.param("multi_process", multi_process_, 1); // update agressively, more than once per frame
 
   private_nh_.param("odom_frame_id", odom_frame_id_, std::string("odom"));
   private_nh_.param("base_frame_id", base_frame_id_, std::string("base_link"));
@@ -566,6 +568,7 @@ void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level)
   a_thresh_ = config.update_min_a;
   update_min_dt_ = config.update_min_dt;
   update_max_dt_ = config.update_max_dt;
+  multi_process_ = config.multi_process;
 
   resample_interval_ = config.resample_interval;
 
@@ -1265,7 +1268,9 @@ AmclNode::laserReceived_(const sensor_msgs::LaserScanConstPtr& laser_scan)
     if (update_dt > ros::Duration(update_max_dt_)) {
       update = true; // too low
     }
-    update = true; // xx!!
+    if (multi_process_ > 1) {
+      update = true;
+    }
     update = update || m_force_update;
     m_force_update=false;
 
@@ -1299,12 +1304,9 @@ AmclNode::laserReceived_(const sensor_msgs::LaserScanConstPtr& laser_scan)
 
     resample_count_ = 0;
   }
-  // If the robot has moved, update the filter
+  // update the filter
   else if(pf_init_ && lasers_update_[laser_index])
   {
-    //printf("pose\n");
-    //pf_vector_fprintf(pose, stdout, "%.3f");
-
     AMCLOdomData odata;
     odata.pose = pose;
     // HACK
@@ -1314,13 +1316,10 @@ AmclNode::laserReceived_(const sensor_msgs::LaserScanConstPtr& laser_scan)
 
     // Use the action data to update the filter
     odom_->UpdateAction(pf_, (AMCLSensorData*)&odata);
-
-    // Pose at last filter update
-    //this->pf_odom_pose = pose;
   }
 
   bool resampled = false;
-  // If the robot has moved, update the filter
+  // update the filter
   if(lasers_update_[laser_index])
   {
     AMCLLaserData ldata;
@@ -1395,7 +1394,10 @@ AmclNode::laserReceived_(const sensor_msgs::LaserScanConstPtr& laser_scan)
               (i * angle_increment);
     }
 
-    lasers_[laser_index]->UpdateSensor(pf_, (AMCLSensorData*)&ldata);
+    int num_iter = multi_process_ > 1 ? multi_process_ : 1;
+    for (int ii = 0; ii < num_iter; ii++) {
+      lasers_[laser_index]->UpdateSensor(pf_, (AMCLSensorData*)&ldata);
+    }
 
     double total_percent = 100.0 * pf_->total;
     this->last_match_percent = 100.0 * pf_->accuracy;
@@ -1407,7 +1409,7 @@ AmclNode::laserReceived_(const sensor_msgs::LaserScanConstPtr& laser_scan)
     pf_odom_pose_ = pose;
 
     // Resample the particles
-    if(!(++resample_count_ % resample_interval_))
+    if (multi_process_ > 1 || (!(++resample_count_ % resample_interval_)))
     {
       pf_update_resample(pf_);
       resampled = true;
