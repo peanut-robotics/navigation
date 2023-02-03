@@ -1387,6 +1387,10 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
     int num_iter = multi_process_ > 1 ? multi_process_ : 1;
     for (int ii = 0; ii < num_iter; ii++) {
       lasers_[laser_index]->UpdateSensor(pf_, (AMCLSensorData*)&ldata);
+      if (multi_process_ > 1) {
+        pf_update_resample(pf_);
+        resampled = true;
+      }
     }
 
     double total_percent = 100.0 * pf_->total;
@@ -1399,7 +1403,7 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
     pf_odom_pose_ = pose;
 
     // Resample the particles
-    if (multi_process_ > 1 || (!(++resample_count_ % resample_interval_)))
+    if (multi_process_ <= 1 && (!(++resample_count_ % resample_interval_)))
     {
       pf_update_resample(pf_);
       resampled = true;
