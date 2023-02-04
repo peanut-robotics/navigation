@@ -585,6 +585,14 @@ void AmclNode::reconfigureCB(AMCLConfig &config, uint32_t level)
   alpha3_ = config.odom_alpha3;
   alpha4_ = config.odom_alpha4;
   alpha5_ = config.odom_alpha5;
+  if (multi_process_ > 1) {
+    double scale_up = static_cast<double>(multi_process_);
+    alpha1_ *= scale_up;
+    alpha2_ *= scale_up;
+    alpha3_ *= scale_up;
+    alpha4_ *= scale_up;
+    alpha5_ *= scale_up;
+  }
   min_trans_ = config.odom_min_trans;
   min_rot_ = config.odom_min_rot;
 
