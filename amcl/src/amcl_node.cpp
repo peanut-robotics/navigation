@@ -466,8 +466,8 @@ AmclNode::AmclNode() :
   private_nh_.param("tf_broadcast", tf_broadcast_, true);
 
   // For diagnostics
-  private_nh_.param("std_warn_level_x", std_warn_level_x_, 0.35); // m
-  private_nh_.param("std_warn_level_y", std_warn_level_y_, 0.35); // xx!! should be ~0.2
+  private_nh_.param("std_warn_level_x", std_warn_level_x_, 0.2); // m
+  private_nh_.param("std_warn_level_y", std_warn_level_y_, 0.2);
   private_nh_.param("std_warn_level_yaw", std_warn_level_yaw_, 0.1); // radians
   private_nh_.param("warn_level_accuracy", accuracy_warn_level_, 30.0); // percent
 
@@ -1708,6 +1708,9 @@ AmclNode::standardDeviationDiagnostics(diagnostic_updater::DiagnosticStatusWrapp
   diagnostic_status.add("std_x", std_x);
   diagnostic_status.add("std_y", std_y);
   diagnostic_status.add("std_yaw", std_yaw);
+  diagnostic_status.add("std_warn_level_x", std_warn_level_x_);
+  diagnostic_status.add("std_warn_level_y", std_warn_level_y_);
+  diagnostic_status.add("std_warn_level_yaw", std_warn_level_yaw_);
 
   if (std_x > std_warn_level_x_ || std_y > std_warn_level_y_ || std_yaw > std_warn_level_yaw_)
   {
@@ -1722,6 +1725,7 @@ AmclNode::standardDeviationDiagnostics(diagnostic_updater::DiagnosticStatusWrapp
 void
 AmclNode::accuracyDiagnostics(diagnostic_updater::DiagnosticStatusWrapper& diagnostic_status) {
   diagnostic_status.add("match_percent", this->last_match_percent); // 0..100
+  diagnostic_status.add("accuracy_warn_level", this->accuracy_warn_level_);
 
   if (this->last_match_percent < this->accuracy_warn_level_) {
     diagnostic_status.summary(diagnostic_msgs::DiagnosticStatus::WARN, "Bad accuracy");
