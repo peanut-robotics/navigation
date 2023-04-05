@@ -1602,8 +1602,10 @@ AmclNode::initialPoseReceived(const geometry_msgs::PoseWithCovarianceStampedCons
 }
 
 void
-AmclNode::handleInitialPoseMessage(const geometry_msgs::PoseWithCovarianceStamped& msg)
+AmclNode::handleInitialPoseMessage(const geometry_msgs::PoseWithCovarianceStamped& cmsg)
 {
+  geometry_msgs::PoseWithCovarianceStamped msg = cmsg;
+
   boost::recursive_mutex::scoped_lock prl(configuration_mutex_);
   if(msg.header.frame_id == "")
   {
@@ -1663,6 +1665,14 @@ AmclNode::handleInitialPoseMessage(const geometry_msgs::PoseWithCovarianceStampe
   pf_init_pose_mean.v[1] = pose_new.getOrigin().y();
   pf_init_pose_mean.v[2] = tf2::getYaw(pose_new.getRotation());
   pf_matrix_t pf_init_pose_cov = pf_matrix_zero();
+
+  // default values
+  if (msg.pose.covariance[0] == 0 && msg.pose.covariance[7] == 0 && msg.pose.covariance[35] == 0) {
+    msg.pose.covariance[0] = 0.25;
+    msg.pose.covariance[7] = 0.25;
+    msg.pose.covariance[35] = 0.10;
+  }
+
   // Copy in the covariance, converting from 6-D to 3-D
   for(int i=0; i<2; i++)
   {
