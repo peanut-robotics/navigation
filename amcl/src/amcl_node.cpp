@@ -1726,6 +1726,7 @@ AmclNode::standardDeviationDiagnostics(diagnostic_updater::DiagnosticStatusWrapp
 
   if (std_x > std_warn_level_x_ || std_y > std_warn_level_y_ || std_yaw > std_warn_level_yaw_)
   {
+    ROS_WARN_STREAM_THROTTLE(1.0, "std_x: " << std_x << " std_y: " << std_y << " std_yaw: " << std_yaw);
     diagnostic_status.summary(diagnostic_msgs::DiagnosticStatus::WARN, "Too large");
   }
   else
@@ -1739,6 +1740,7 @@ AmclNode::accuracyDiagnostics(diagnostic_updater::DiagnosticStatusWrapper& diagn
   diagnostic_status.add("match_percent", this->last_match_percent); // 0..100
 
   if (this->last_match_percent < this->accuracy_warn_level_) {
+    ROS_WARN_STREAM_THROTTLE(1.0, "match_percent: " << this->last_match_percent);
     diagnostic_status.summary(diagnostic_msgs::DiagnosticStatus::WARN, "Bad accuracy");
   }
   else {
