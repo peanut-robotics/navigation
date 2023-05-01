@@ -226,7 +226,6 @@ double AMCLLaser::ScorePose(AMCLLaserData *data, pf_vector_t pose) {
     double p;
     double map_range;
     double obs_range, obs_bearing;
-    pf_sample_t *sample;
     pf_vector_t hit;
 
     self = (AMCLLaser*) data->sensor;

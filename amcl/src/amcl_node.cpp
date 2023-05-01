@@ -1449,13 +1449,6 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
         break;
       }
 
-      // want to rerun laser on pose_mean
-      if (compute_accuracy) {
-        double accuracy = lasers_[laser_index]->ScorePose(&ldata, pose_mean);
-        ROS_INFO("Accuracy: %.2f", accuracy);
-        this->last_accuracy = 100.0 * accuracy;
-      }
-
       hyps[hyp_count].weight = weight;
       hyps[hyp_count].pf_pose_mean = pose_mean;
       hyps[hyp_count].pf_pose_cov = pose_cov;
@@ -1487,6 +1480,14 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
       // Copy in the pose
       p.pose.pose.position.x = hyps[max_weight_hyp].pf_pose_mean.v[0];
       p.pose.pose.position.y = hyps[max_weight_hyp].pf_pose_mean.v[1];
+
+      // want to rerun laser on pose_mean
+      if (compute_accuracy) {
+        ROS_INFO("Pose mean: %.2f %.2f", hyps[max_weight_hyp].pf_pose_mean.v[0], hyps[max_weight_hyp].pf_pose_mean.v[1]);
+        double accuracy = lasers_[laser_index]->ScorePose(&ldata, hyps[max_weight_hyp].pf_pose_mean);
+        ROS_INFO("Accuracy: %.2f", accuracy);
+        this->last_accuracy = 100.0 * accuracy;
+      }
 
       tf2::Quaternion q;
       q.setRPY(0, 0, hyps[max_weight_hyp].pf_pose_mean.v[2]);
