@@ -1310,6 +1310,8 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
   }
 
   bool resampled = false;
+  bool compute_accuracy = false;
+
   // If the robot has moved, update the filter
   AMCLLaserData ldata;
   if(lasers_update_[laser_index])
@@ -1389,6 +1391,7 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
 
     double total_percent = 100.0 * pf_->total;
     this->last_match_percent = 100.0 * pf_->accuracy;
+    compute_accuracy = true;
     // ROS_INFO("total: %0.1f%% samples: %d accuracy: %0.1f%%",
     //   total_percent, pf_->sample_count, this->last_match_percent);
 
@@ -1446,8 +1449,8 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
         break;
       }
 
-      // xx!! want to rerun laser on pose_mean
-      if (lasers_update_[laser_index]) {
+      // want to rerun laser on pose_mean
+      if (compute_accuracy) {
         double accuracy = lasers_[laser_index]->ScorePose(&ldata, pose_mean);
         ROS_INFO("Accuracy: %.2f", accuracy);
         this->last_accuracy = 100.0 * accuracy;

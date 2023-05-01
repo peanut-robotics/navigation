@@ -311,7 +311,7 @@ void pf_update_sensor(pf_t *pf, pf_sensor_model_fn_t sensor_fn, void *sensor_dat
       pf->accuracy += pf->alpha_accuracy * (w_avg - pf->accuracy);
     // printf("w_avg: %e slow: %e fast: %e\n", w_avg, pf->w_slow, pf->w_fast);
 
-    pf_sample_set_t *set; // xx!!
+    pf_sample_set_t *set;
     pf_sample_t *sample;
     double total;
 
