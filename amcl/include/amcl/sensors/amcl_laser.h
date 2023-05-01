@@ -105,6 +105,9 @@ class AMCLLaser : public AMCLSensor
   private: static double LikelihoodFieldModelProb(AMCLLaserData *data,
 					     pf_sample_set_t* set);
 
+  // evaluate accurcy of a single pose
+  public: static double ScorePose(AMCLLaserData *data, pf_vector_t pose);
+
   private: void reallocTempData(int max_samples, int max_obs);
 
   private: laser_model_t model_type;

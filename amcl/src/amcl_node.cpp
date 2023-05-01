@@ -199,7 +199,8 @@ class AmclNode
     ros::Duration save_pose_period;
 
     geometry_msgs::PoseWithCovarianceStamped last_published_pose;
-    double last_match_percent;
+    double last_match_percent = 100.0;
+    double last_accuracy = 100.0;
 
     map_t* map_;
     char* mapdata;
@@ -1310,9 +1311,9 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
 
   bool resampled = false;
   // If the robot has moved, update the filter
+  AMCLLaserData ldata;
   if(lasers_update_[laser_index])
   {
-    AMCLLaserData ldata;
     ldata.sensor = lasers_[laser_index];
     ldata.range_count = laser_scan->ranges.size();
 
@@ -1443,6 +1444,13 @@ AmclNode::laserReceived(const sensor_msgs::LaserScanConstPtr& laser_scan)
       {
         ROS_ERROR("Couldn't get stats on cluster %d", hyp_count);
         break;
+      }
+
+      // xx!! want to rerun laser on pose_mean
+      if (lasers_update_[laser_index]) {
+        double accuracy = lasers_[laser_index]->ScorePose(&ldata, pose_mean);
+        ROS_INFO("Accuracy: %.2f", accuracy);
+        this->last_accuracy = 100.0 * accuracy;
       }
 
       hyps[hyp_count].weight = weight;
@@ -1738,6 +1746,7 @@ AmclNode::standardDeviationDiagnostics(diagnostic_updater::DiagnosticStatusWrapp
 void
 AmclNode::accuracyDiagnostics(diagnostic_updater::DiagnosticStatusWrapper& diagnostic_status) {
   diagnostic_status.add("match_percent", this->last_match_percent); // 0..100
+  diagnostic_status.add("accuracy", this->last_accuracy); // 0..100
 
   if (this->last_match_percent < this->accuracy_warn_level_) {
     ROS_WARN_STREAM_THROTTLE(1.0, "match_percent: " << this->last_match_percent);
