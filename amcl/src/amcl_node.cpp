@@ -266,6 +266,8 @@ class AmclNode
     double std_warn_level_y_;
     double std_warn_level_yaw_;
     double accuracy_warn_level_;
+    ros::Time std_warn_time_;
+    ros::Time accuracy_warn_time_;
 
     amcl_hyp_t* initial_pose_hyp_;
     bool first_map_received_;
@@ -1734,16 +1736,36 @@ AmclNode::standardDeviationDiagnostics(diagnostic_updater::DiagnosticStatusWrapp
   private_nh_.param("std_warn_level_x", std_warn_level_x_, 0.2); // m
   private_nh_.param("std_warn_level_y", std_warn_level_y_, 0.2);
   private_nh_.param("std_warn_level_yaw", std_warn_level_yaw_, 0.1); // radians
-  private_nh_.param("warn_level_accuracy", accuracy_warn_level_, 30.0); // percent
 
-  if (std_x > std_warn_level_x_ || std_y > std_warn_level_y_ || std_yaw > std_warn_level_yaw_)
+  auto error_level_x = 2.0 * std_warn_level_x_;
+  auto error_level_y = 2.0 * std_warn_level_y_;
+  auto error_level_yaw = 2.0 * std_warn_level_yaw_;
+
+  if (std_x > error_level_x || std_y > error_level_y || std_yaw > error_level_yaw)
   {
+    diagnostic_status.summary(diagnostic_msgs::DiagnosticStatus::ERROR, "Much too large");
+  }
+  else if (std_x > std_warn_level_x_ || std_y > std_warn_level_y_ || std_yaw > std_warn_level_yaw_)
+  {
+    auto lvl = diagnostic_msgs::DiagnosticStatus::WARN;
+    std::string msg = "Too large";
     ROS_WARN_STREAM_THROTTLE(1.0, "std_x: " << std_x << " std_y: " << std_y << " std_yaw: " << std_yaw);
-    diagnostic_status.summary(diagnostic_msgs::DiagnosticStatus::WARN, "Too large");
+    if (!this->std_warn_time_.isZero()) {
+      ros::Duration d = ros::Time::now() - this->std_warn_time_;
+      if (d.toSec() > 5.0) {
+        lvl = diagnostic_msgs::DiagnosticStatus::ERROR;
+      }
+    }
+    else {
+      this->std_warn_time_ = ros::Time::now();
+    }
+
+    diagnostic_status.summary(lvl, msg);
   }
   else
   {
     diagnostic_status.summary(diagnostic_msgs::DiagnosticStatus::OK, "OK");
+    this->std_warn_time_.fromSec(0);
   }
 }
 
@@ -1752,11 +1774,31 @@ AmclNode::accuracyDiagnostics(diagnostic_updater::DiagnosticStatusWrapper& diagn
   diagnostic_status.add("match_percent", this->last_match_percent); // 0..100
   diagnostic_status.add("accuracy_percent", this->last_accuracy_percent); // 0..100
 
-  if (this->last_match_percent < this->accuracy_warn_level_) {
+  private_nh_.param("warn_level_accuracy", accuracy_warn_level_, 30.0); // percent
+  auto error_level_accuracy = 0.5 * accuracy_warn_level_;
+
+  if (this->last_match_percent < error_level_accuracy)
+  {
+    ROS_ERROR_STREAM_THROTTLE(1.0, "match_percent: " << this->last_match_percent);
+    diagnostic_status.summary(diagnostic_msgs::DiagnosticStatus::ERROR, "Very bad accuracy");
+  }
+  else if (this->last_match_percent < this->accuracy_warn_level_) {
+    auto lvl = diagnostic_msgs::DiagnosticStatus::WARN;
+    std::string msg = "Bad accuracy";
     ROS_WARN_STREAM_THROTTLE(1.0, "match_percent: " << this->last_match_percent);
-    diagnostic_status.summary(diagnostic_msgs::DiagnosticStatus::WARN, "Bad accuracy");
+    if (!this->accuracy_warn_time_.isZero()) {
+      ros::Duration d = ros::Time::now() - this->accuracy_warn_time_;
+      if (d.toSec() > 5.0) {
+        lvl = diagnostic_msgs::DiagnosticStatus::ERROR;
+      }
+    }
+    else {
+      this->accuracy_warn_time_ = ros::Time::now();
+    }
+    diagnostic_status.summary(lvl, msg);
   }
   else {
     diagnostic_status.summary(diagnostic_msgs::DiagnosticStatus::OK, "OK");
+    this->accuracy_warn_time_.fromSec(0);
   }
 }
