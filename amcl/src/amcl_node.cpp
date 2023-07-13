@@ -1779,13 +1779,13 @@ AmclNode::accuracyDiagnostics(diagnostic_updater::DiagnosticStatusWrapper& diagn
 
   if (this->last_match_percent < error_level_accuracy)
   {
-    ROS_ERROR_STREAM_THROTTLE(1.0, "match_percent: " << this->last_match_percent);
+    // ROS_ERROR_STREAM_THROTTLE(1.0, "match_percent: " << this->last_match_percent);
     diagnostic_status.summary(diagnostic_msgs::DiagnosticStatus::ERROR, "Very bad accuracy");
   }
   else if (this->last_match_percent < this->accuracy_warn_level_) {
     auto lvl = diagnostic_msgs::DiagnosticStatus::WARN;
     std::string msg = "Bad accuracy";
-    ROS_WARN_STREAM_THROTTLE(1.0, "match_percent: " << this->last_match_percent);
+    // ROS_WARN_STREAM_THROTTLE(1.0, "match_percent: " << this->last_match_percent);
     if (!this->accuracy_warn_time_.isZero()) {
       ros::Duration d = ros::Time::now() - this->accuracy_warn_time_;
       if (d.toSec() > 5.0) {
